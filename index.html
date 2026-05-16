@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nova IPTV</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Video Player (HLS.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div id="app" class="app-container">
+        
+        <!-- Login / Source Selection Screen -->
+        <section id="login-screen" class="screen active">
+            <div class="glass-card login-box">
+                <div class="logo">
+                    <i class="fa-solid fa-tv"></i>
+                    <h1>Nova Stream</h1>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="xtream-form" data-i18n="xtream_api">Xtream API</button>
+                    <button class="tab-btn" data-target="m3u-form" data-i18n="m3u_playlist">M3U Playlist</button>
+                </div>
+
+                <!-- Xtream API Form -->
+                <form id="xtream-form" class="login-form active">
+                    <div class="input-group">
+                        <i class="fa-solid fa-signature"></i>
+                        <input type="text" id="xtream-name" data-i18n="playlist_name" placeholder="Playlist Name" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-link"></i>
+                        <input type="url" id="xtream-url" data-i18n="server_url" placeholder="Server URL" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="xtream-user" data-i18n="username" placeholder="Username" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-key"></i>
+                        <input type="password" id="xtream-pass" data-i18n="password" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="btn primary-btn"><i class="fa-solid fa-right-to-bracket"></i> <span data-i18n="login">Login</span></button>
+                </form>
+
+                <!-- M3U Form -->
+                <form id="m3u-form" class="login-form">
+                    <div class="input-group">
+                        <i class="fa-solid fa-signature"></i>
+                        <input type="text" id="m3u-name" data-i18n="playlist_name" placeholder="Playlist Name" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-link"></i>
+                        <input type="url" id="m3u-url" data-i18n="server_url" placeholder="M3U URL" required>
+                    </div>
+                    <div class="divider"><span data-i18n="or_upload_m3u">Or upload local M3U file</span></div>
+                    <div class="file-upload">
+                        <input type="file" id="m3u-file" accept=".m3u,.m3u8" style="display: none;">
+                        <label for="m3u-file" class="btn secondary-btn"><i class="fa-solid fa-upload"></i> <span data-i18n="upload_file">Upload File</span></label>
+                    </div>
+                    <button type="submit" class="btn primary-btn"><i class="fa-solid fa-right-to-bracket"></i> <span data-i18n="login">Login</span></button>
+                </form>
+
+                <div id="saved-playlists-container" class="hidden">
+                    <h3 data-i18n="saved_playlists">Saved Playlists</h3>
+                    <ul id="saved-playlists-list"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main App Screen (Channels & VOD) -->
+        <section id="main-screen" class="screen">
+            <!-- Sidebar Navigation -->
+            <nav class="sidebar">
+                <div class="sidebar-logo">
+                    <i class="fa-solid fa-tv"></i>
+                    <span>Nova</span>
+                </div>
+                <ul class="nav-links">
+                    <li class="active" data-view="live">
+                        <i class="fa-solid fa-tower-broadcast"></i> <span data-i18n="live_tv">Live TV</span>
+                    </li>
+                    <li data-view="movies">
+                        <i class="fa-solid fa-film"></i> <span data-i18n="movies">Movies</span>
+                    </li>
+                    <li data-view="series">
+                        <i class="fa-solid fa-clapperboard"></i> <span data-i18n="series">Series</span>
+                    </li>
+                    <li data-view="settings" style="margin-top: auto;">
+                        <i class="fa-solid fa-gear"></i> <span data-i18n="settings">Settings</span>
+                    </li>
+                </ul>
+                <div class="sidebar-footer">
+                    <button id="logout-btn" class="btn icon-btn"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="content-area">
+                <!-- Header / Search -->
+                <header class="top-bar">
+                    <button id="mobile-cat-btn" class="btn icon-btn mobile-only"><i class="fa-solid fa-folder-open"></i></button>
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="search-input" data-i18n="search_placeholder" placeholder="Search channels, movies...">
+                    </div>
+                </header>
+
+                <!-- Categories & List View -->
+                <div id="view-container" class="view-container">
+                    <!-- Dynamic content injected here -->
+                    <div class="layout-split">
+                        <div id="category-backdrop" class="drawer-backdrop hidden"></div>
+                        <div class="categories-list glass-panel" id="category-list">
+                            <!-- Categories -->
+                        </div>
+                        <div class="items-grid" id="items-grid">
+                            <!-- Channels/Movies -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings View -->
+                <div id="settings-container" class="view-container hidden">
+                    <div class="settings-panel glass-card">
+                        <h2 data-i18n="settings">Settings</h2>
+                        <div class="settings-group hidden" id="install-container">
+                            <h3 data-i18n="app_install">App Installation</h3>
+                            <button id="install-btn" class="btn primary-btn"><i class="fa-solid fa-download"></i> <span data-i18n="install_app">Install App</span></button>
+                            <p class="settings-desc" data-i18n="install_desc">Install Nova IPTV as a native app on your device for a better experience.</p>
+                        </div>
+                        <div class="settings-group">
+                            <h3 data-i18n="data_mgmt">Data Management</h3>
+                            <button id="clear-data-btn" class="btn danger-btn"><i class="fa-solid fa-trash"></i> <span data-i18n="clear_data">Clear All Saved Data</span></button>
+                            <p class="settings-desc" data-i18n="clear_data_desc">This will remove all saved credentials and playlists from this device.</p>
+                        </div>
+                        <div class="settings-group" id="account-management-group" style="display: none;">
+                            <h3 data-i18n="account_mgmt">Account Management (Active Xtream)</h3>
+                            <form id="edit-account-form" class="login-form active" style="margin-top:15px;">
+                                <div class="input-group">
+                                    <i class="fa-solid fa-signature"></i>
+                                    <input type="text" id="edit-name" data-i18n="display_name" placeholder="Display Name" required>
+                                </div>
+                                <div class="input-group">
+                                    <i class="fa-solid fa-link"></i>
+                                    <input type="url" id="edit-url" data-i18n="server_url" placeholder="Server URL" required>
+                                </div>
+                                <div class="input-group">
+                                    <i class="fa-solid fa-user"></i>
+                                    <input type="text" id="edit-user" data-i18n="username" placeholder="Username" required>
+                                </div>
+                                <div class="input-group">
+                                    <i class="fa-solid fa-key"></i>
+                                    <input type="password" id="edit-pass" data-i18n="password" placeholder="Password" required>
+                                </div>
+                                <button type="submit" class="btn primary-btn"><span data-i18n="update_account">Update Account</span></button>
+                            </form>
+                        </div>
+                        <div class="settings-group">
+                            <h3 data-i18n="player_settings">Content & Player Settings</h3>
+                            <div style="margin-bottom: 15px;">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="adult-content-toggle">
+                                    <span class="slider"></span>
+                                    <span class="label-text" data-i18n="show_adult">Show Adult Content</span>
+                                </label>
+                                <p class="settings-desc" data-i18n="show_adult_desc">Allow 18+ / Adult categories to be displayed.</p>
+                            </div>
+                            <div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="force-hls-toggle" checked>
+                                    <span class="slider"></span>
+                                    <span class="label-text" data-i18n="use_hls">Use HLS.js (Recommended)</span>
+                                </label>
+                                <p class="settings-desc" data-i18n="use_hls_desc">Disable to use the browser's native video player (useful on some Smart TVs or Safari).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- Series Episode Browser Modal -->
+        <div id="series-modal" class="overlay hidden">
+            <div class="series-modal-content glass-card">
+                <button id="close-series-btn" class="btn icon-btn close-floating"><i class="fa-solid fa-xmark"></i></button>
+                <div class="series-header">
+                    <div class="series-poster" id="series-poster"></div>
+                    <div class="series-info">
+                        <h2 id="series-title">Series Title</h2>
+                        <p id="series-plot" class="series-plot"></p>
+                        <div class="series-meta" id="series-meta"></div>
+                    </div>
+                </div>
+                <div class="series-body">
+                    <div class="season-tabs" id="season-tabs"></div>
+                    <div class="episodes-list" id="episodes-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Player Overlay -->
+        <div id="player-overlay" class="overlay hidden">
+            <div class="player-wrapper">
+                <button id="close-player" class="btn icon-btn close-btn"><i class="fa-solid fa-xmark"></i></button>
+                <video id="video-player" controls playsinline></video>
+                <div class="player-info" id="player-info">
+                    <h2 id="now-playing-title">Channel Name</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loading-overlay" class="overlay hidden">
+            <div class="spinner"></div>
+            <p id="loading-text">Loading...</p>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered!', reg))
+                    .catch(err => console.error('SW Registration Failed!', err));
+            });
+        }
+    </script>
+</body>
+</html>
